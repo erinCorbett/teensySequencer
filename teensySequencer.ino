@@ -301,7 +301,7 @@ void setup() {
 
   bass.begin(0.5, 400, WAVEFORM_SAWTOOTH);
   bass_filter.frequency(200);
-  bass_filter.resonance(7);
+  bass_filter.resonance(10);
   bass_filter.octaveControl(7);
   
   bass_env.attack(0);
@@ -387,10 +387,22 @@ int hvc, hpc, hhPC = 0;
 int bvc, bpc, bbPC = 0;
 
 int snPC = 0;
+
+
+//LOOP -------------------------------------------------------------------||
+
 void loop() {
+  float tempoMult = floor(mapfloat(analogRead(A0), 0, 1023, 2.0, 0.1)*10)/10;
+  float bassFiltDec = map(analogRead(A2), 0, 1023, 0, 20000);
+  float stutterButton = analogRead(A3);
+
+  bass_filter.frequency(bassFiltDec);
+
+  Serial.println(analogRead(A3));
+
   
 
-  if(count<15) {
+  if(count<15 && stutterButton<1000) {
     //polyNoteOn();
     count++;
   } else {
@@ -405,23 +417,23 @@ void loop() {
   }
   
   if(sequences[kickPattern[kkPC]][count]) {
-    triggerKick(count);
+    triggerKick(stutterButton);
   }
   if(sequences[bassPattern[bbPC]][count]) {
-    triggerBass();
+    triggerBass(stutterButton);
   }
 
   switch(sequences[polyPattern[poPC]][count]) {
     case 0:
     break;
-    case 1: triggerPoly();
+    case 1: triggerPoly(stutterButton);
     break;
     case 2: polyNoteOff();
     break;
     
   }
   if (sequences[snarePattern[snPC]][count]) {
-    triggerSnare();
+    triggerSnare(stutterButton);
   }
 
   if(sequences[2][count]) {
@@ -434,21 +446,24 @@ void loop() {
     //tom.noteOn();
   }
 
-  delay(speed);
+  delay(speed*tempoMult);
   frame++;
 
   resetStep();
   
 }
 
-
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 //TRIGGER KICK DRUM
 
-void triggerKick(int count) {
+void triggerKick(float stutterButton) {
   kick_amp.gain(kickVel[kvc]);
   kick.frequency(kickPitch[kpc]);
   kick.noteOn();
-
+  if (stutterButton<1000) {
   if(kvc<kvLength-1) {
     kvc++;
   } else {
@@ -460,14 +475,17 @@ void triggerKick(int count) {
   } else {
     kpc = 0;
   }
+  }
 }
 
 //TRIGGER BASS
-void triggerBass() {
+void triggerBass(float stutterButton) {
   bass.amplitude(bassVelocity[bvc]);
   //bass.frequency(bassPitch[bpc]*1.5);
   bass.frequency(scaleNote[bassPitch[bpc]]);
   bass_env.noteOn();
+
+  if (stutterButton<1000) {
   if(bvc<bvLength-1) {
     bvc++;
   } else {
@@ -479,32 +497,32 @@ void triggerBass() {
   } else {
     bpc = 0;
   }
+  }
 }
 
 
-
 //TRIGGER SNARE
-void triggerSnare() {
+void triggerSnare(float stutterButton) {
     snare_env.noteOn();
     //bass_env.noteOn();
 }
 
 //TRIGGER HI-HAT
-void triggerHat(int count) {
+void triggerHat(float stutterButton) {
   hat.amplitude(hatVel[hvc]);
   hat_env.noteOn();
-
+  if (stutterButton<1000) {
   if(hvc<hatVelLength) {
     hvc++;
   } else {
     hvc = 0;
   }
+  }
 }
 
-void triggerPoly() {
+void triggerPoly(float stutterButton) {
   //bass.amplitude(bassVelocity[bvc]);
   //bass.frequency(bassPitch[bpc]*1.5);
-  Serial.println(ppc);
 
 
   polyA.frequency(scaleNote[chords[polyChord[ppc]][0]]);
@@ -518,11 +536,12 @@ void triggerPoly() {
   } else {
     bvc = 0;
   }*/
-
+  if (stutterButton<1000) {
   if(ppc<polyCLength-1) {
     ppc++;
   } else {
     ppc = 0;
+  }
   }
 }
 
